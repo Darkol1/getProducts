@@ -12,7 +12,7 @@ const year = date.getUTCFullYear();
 const month = date.getUTCMonth() + 1 < 10 ? "0" + (date.getUTCMonth() + 1) : date.getUTCMonth();
 const day = date.getUTCDate();
 const hash = CryptoJS.MD5('Valantis_' + `${year}` + `${month}` + `${day}`).toString();
-const url = 'http://api.valantis.store:40000/';
+const url = 'https://api.valantis.store:41000/';
 const config = { headers: { 'X-Auth': hash } };
 
 
