@@ -26,50 +26,80 @@ export default function Main() {
   const [priceSelect, setPriceSelect] = useState('');
   const [brandSelect, setBrandSelect] = useState('');
   const [filteredProducts, setFilteredProducts] = useState(null);
+  const [productsId, setProductsId] = useState(null);
 
   const fetchProductIds = async () => {
     try {
       const idResponse = await axios.post(url, { "action": "get_ids" }, config);
       const productIds = idResponse.data.result;
-
-      const productDetailsResponse = await axios.post(url, {
-        "action": "get_items",
-        "params": { "ids": productIds }
-      }, config);
-
-      const productDetails = productDetailsResponse.data.result;
+      setProductsId(productIds);
+      setCurrentPage(1);
       
-      if (idResponse.status !== 200 || productDetailsResponse.status !== 200) {
+      if (idResponse.status !== 200) {
         throw new Error('Network error');
       }
-    
-    function sort(arr) {
-      const uniqueMap = {}; 
-      const uniqueArray = []; 
-
-      for (let i = 0; i < arr.length; i++) {
-        const valueId = arr[i].id;
-      
-        if (!uniqueMap[valueId]) {
-          uniqueMap[valueId] = true; 
-          uniqueArray.push(arr[i]); 
-        }
-      }
-      return uniqueArray;
-    }
-
-      const uniqValues = await sort(productDetails);
-      setProducts(uniqValues);
-      setCurrentPage(1);
     } catch (error) {
       console.error(error);
       setErr(prev => prev + 1);
     }
 };
 
+function sort(arr) {
+  const uniqueMap = {}; 
+  const uniqueArray = []; 
+
+  for (let i = 0; i < arr.length; i++) {
+    const valueId = arr[i].id;
+  
+    if (!uniqueMap[valueId]) {
+      uniqueMap[valueId] = true; 
+      uniqueArray.push(arr[i]); 
+    }
+  }
+  return uniqueArray;
+}
+
+const createPageContent = async () => {
+  if (!productsId) return;
+  const startIndex = currentPage * numberOfItems - numberOfItems;
+  let endIndex = startIndex  + numberOfItems;
+  if ( endIndex > productsId.length) { endIndex = productsId.length};
+
+  function funcSlice(start, end) {return (productsId.slice(start, end))}
+  try {
+
+    const productDetailsResponse = await axios.post(url, {
+      "action": "get_items",
+      "params": { "ids": funcSlice(startIndex, endIndex) }
+    }, config);
+
+    
+    if (productDetailsResponse.status !== 200) {
+      throw new Error('Network error');
+    }
+
+    const productDetails = productDetailsResponse.data.result;
+
+    const uniqValues = await sort(productDetails);
+    setCurrentProducts(uniqValues);
+    setFilteredProducts(uniqValues);
+    setProducts(uniqValues);
+  } catch (error) {
+    console.error(error);
+    setErr(prev => prev + 1);
+  }
+};
+
   useEffect( () => {
     fetchProductIds();
   }, []);
+
+  useEffect( () => {
+    createPageContent();
+    setNameSelect('');
+    setPriceSelect('');
+    setBrandSelect('');
+  }, [currentPage, err]);
 
   useEffect(() => {
     if (err && err < 5) {
@@ -107,7 +137,7 @@ export default function Main() {
         <Container>
             <ButtonWrapper>
                 <Button onClick={() => setCurrentPage(prevPage => prevPage === 1 ? prevPage :  prevPage - 1)}>Назад</Button>
-                <Button onClick={() => setCurrentPage(prevPage => prevPage === products.length/numberOfItems ? prevPage :  prevPage + 1)}>Вперед</Button>
+                <Button onClick={() => setCurrentPage(prevPage => prevPage === Math.floor(products.length/numberOfItems) ? prevPage :  prevPage + 1)}>Вперед</Button>
             </ButtonWrapper>
 
             <SelectWrapper>
